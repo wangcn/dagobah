@@ -3,13 +3,14 @@
 from datetime import datetime
 from collections import defaultdict
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
 STREAM_LOG_SIZE = 1000000
+
 
 class Dagobah(Base):
     __tablename__ = 'dagobah'
@@ -42,6 +43,7 @@ class DagobahJob(Base):
     cron_schedule = Column(String(100))
     next_run = Column(DateTime)
     notes = Column(String(1000))
+    recipient = Column(Text)
 
     tasks = relationship('DagobahTask', backref='job')
     dependencies = relationship('DagobahDependency', backref='job')
@@ -64,10 +66,11 @@ class DagobahJob(Base):
                 'next_run': self.next_run,
                 'tasks': [task.json for task in self.tasks],
                 'dependencies': self._gather_dependencies(),
+                'recipient': self.recipient,
                 'notes': self.notes}
 
     def update_from_dict(self, data):
-        for key in ['parent_id', 'name', 'status', 'cron_schedule',
+        for key in ['parent_id', 'name', 'status', 'cron_schedule', 'recipient',
                     'next_run', 'notes']:
             if key in data:
                 setattr(self, key, data[key])

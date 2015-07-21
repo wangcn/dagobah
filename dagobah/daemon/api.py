@@ -11,6 +11,7 @@ from .util import validate_dict, api_call, allowed_file
 
 dagobah = app.config['dagobah']
 
+
 @app.route('/api/jobs', methods=['GET'])
 @login_required
 @api_call
@@ -227,6 +228,7 @@ def add_dependency():
     job = dagobah.get_job(args['job_name'])
     job.add_dependency(args['from_task_name'], args['to_task_name'])
 
+
 @app.route('/api/delete_dependency', methods=['POST'])
 @login_required
 @api_call
@@ -370,6 +372,23 @@ def update_job_notes():
 
     job = dagobah.get_job(args['job_name'])
     job.update_job_notes(args['notes'])
+
+
+@app.route('/api/edit_job_recipient', methods=['POST'])
+@login_required
+@api_call
+def edit_job_recipient():
+    args = dict(request.form)
+    if not validate_dict(args,
+                         required=['job_name', 'recipient'],
+                         job_name=str,
+                         recipient=str):
+        abort(400)
+
+    import pprint
+    pprint.pprint(args)
+    job = dagobah.get_job(args['job_name'])
+    job.edit_job_recipient(args['recipient'])
 
 
 @app.route('/api/edit_task', methods=['POST'])

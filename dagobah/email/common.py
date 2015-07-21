@@ -58,7 +58,10 @@ class EmailTemplate(object):
 
 
     def _send_message(self):
-        s = smtplib.SMTP(self.host, self.port)
+        if self.use_ssl:
+            s = smtplib.SMTP_SSL(self.host, self.port)
+        else:
+            s = smtplib.SMTP(self.host, self.port)
         if self.use_tls:
             s.ehlo()
             s.starttls()

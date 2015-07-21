@@ -1,16 +1,12 @@
 """ SQLite Backend class built on top of base Backend """
 
 import os
-import logging
-from datetime import datetime
 from copy import deepcopy
 import threading
 
 import sqlalchemy
 import alembic
 from alembic.config import Config
-from alembic.script import ScriptDirectory
-from alembic.environment import EnvironmentContext
 from dateutil import parser
 
 from ..backend.base import BaseBackend

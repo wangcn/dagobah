@@ -18,6 +18,7 @@ from ..backend.base import BaseBackend
 
 logger = logging.getLogger('dagobah')
 
+
 class DagobahError(Exception):
     logger.warn('DagobahError being constructed, something must have gone wrong')
     pass
@@ -48,10 +49,8 @@ class Dagobah(object):
 
         self.commit()
 
-
     def __repr__(self):
         return '<Dagobah with Backend %s>' % self.backend
-
 
     def set_backend(self, backend):
         """ Manually set backend after construction. """
@@ -66,7 +65,6 @@ class Dagobah(object):
 
         self.commit(cascade=True)
 
-
     def from_backend(self, dagobah_id):
         """ Reconstruct this Dagobah instance from the backend. """
         logger.debug('Reconstructing Dagobah instance from backend with ID {0}'.format(dagobah_id))
@@ -75,7 +73,6 @@ class Dagobah(object):
             raise DagobahError('dagobah with id %s does not exist '
                                'in backend' % dagobah_id)
         self._construct_from_json(rec)
-
 
     def _construct_from_json(self, rec):
         """ Construct this Dagobah instance from a JSON document. """
@@ -90,7 +87,6 @@ class Dagobah(object):
 
         self.commit(cascade=True)
 
-
     def add_job_from_json(self, job_json, destructive=False):
         """ Construct a new Job from an imported JSON spec. """
         logger.debug('Importing job from JSON document: {0}'.format(job_json))
@@ -103,7 +99,6 @@ class Dagobah(object):
         self._add_job_from_spec(rec, use_job_id=False)
 
         self.commit(cascade=True)
-
 
     def _add_job_from_spec(self, job_json, use_job_id=True):
         """ Add a single job to the Dagobah from a spec. """
@@ -131,8 +126,8 @@ class Dagobah(object):
 
         if job_json.get('notes', None):
             job.update_job_notes(job_json['notes'])
-
-
+        if job_json.get('recipient', None):
+            job.edit_job_recipient(job_json['recipient'])
 
     def commit(self, cascade=False):
         """ Commit this Dagobah instance to the backend.
@@ -144,14 +139,12 @@ class Dagobah(object):
         if cascade:
             [job.commit() for job in self.jobs]
 
-
     def delete(self):
         """ Delete this Dagobah instance from the Backend. """
         logger.debug('Deleting Dagobah instance with ID {0}'.format(self.dagobah_id))
         self.jobs = []
         self.created_jobs = 0
         self.backend.delete_dagobah(self.dagobah_id)
-
 
     def add_job(self, job_name, job_id=None):
         """ Create a new, empty Job. """
@@ -199,7 +192,7 @@ class Dagobah(object):
         # does not support wildcard matching for a task to run on all hosts.
         hosts = [item for sublist in
                  [hostnames['host'] for hostnames in conf._config]
-                 for item in sublist if not '*' in item ]
+                 for item in sublist if not '*' in item]
         return hosts
 
     def get_host(self, hostname):
@@ -217,7 +210,6 @@ class Dagobah(object):
         logger.warn('Tried to find job with name {0}, but job not found'.format(job_name))
         return None
 
-
     def delete_job(self, job_name):
         """ Delete a job by name, or error out if no such job exists. """
         logger.debug('Deleting job {0}'.format(job_name))
@@ -228,7 +220,6 @@ class Dagobah(object):
                 self.commit()
                 return
         raise DagobahError('no job with name %s exists' % job_name)
-
 
     def add_task_to_job(self, job_or_job_name, task_command, task_name=None,
                         **kwargs):
@@ -257,7 +248,6 @@ class Dagobah(object):
         return (False
                 if [job for job in self.jobs if job.name == job_name]
                 else True)
-
 
     def _serialize(self, include_run_logs=False, strict_json=False):
         """ Serialize a representation of this Dagobah object to JSON. """
@@ -302,6 +292,7 @@ class Job(DAG):
         self.run_log = None
         self.completion_lock = threading.Lock()
         self.notes = None
+        self.recipient = None
 
         self.snapshot = None
 
@@ -309,13 +300,11 @@ class Job(DAG):
 
         self.commit()
 
-
     def commit(self):
         """ Store metadata on this Job to the backend. """
         logger.debug('Committing job {0}'.format(self.name))
         self.backend.commit_job(self._serialize())
         self.parent.commit()
-
 
     def add_task(self, command, name=None, **kwargs):
         """ Adds a new Task to the graph with no edges. """
@@ -332,7 +321,6 @@ class Job(DAG):
         self.add_node(name)
         self.commit()
 
-
     def add_dependency(self, from_task_name, to_task_name):
         """ Add a dependency between two tasks. """
 
@@ -343,7 +331,6 @@ class Job(DAG):
 
         self.add_edge(from_task_name, to_task_name)
         self.commit()
-
 
     def delete_task(self, task_name):
         """ Deletes the named Task in this Job. """
@@ -360,7 +347,6 @@ class Job(DAG):
         self.delete_node(task_name)
         self.commit()
 
-
     def delete_dependency(self, from_task_name, to_task_name):
         """ Delete a dependency between two tasks. """
 
@@ -371,7 +357,6 @@ class Job(DAG):
 
         self.delete_edge(from_task_name, to_task_name)
         self.commit()
-
 
     def schedule(self, cron_schedule, base_datetime=None):
         """ Schedules the job to run periodically using Cron syntax. """
@@ -393,9 +378,9 @@ class Job(DAG):
             self.cron_iter = croniter(cron_schedule, base_datetime)
             self.next_run = self.cron_iter.get_next(datetime)
 
+        logger.debug('base datetime is {0}'.format(base_datetime))
         logger.debug('Determined job {0} next run of {1}'.format(self.name, self.next_run))
         self.commit()
-
 
     def start(self):
         """ Begins the job by kicking off all tasks with no dependencies. """
@@ -430,7 +415,6 @@ class Job(DAG):
 
         self._commit_run_log()
 
-
     def retry(self):
         """ Restarts failed tasks of a job. """
 
@@ -455,7 +439,6 @@ class Job(DAG):
 
         self._commit_run_log()
 
-
     def terminate_all(self):
         """ Terminate all currently running tasks. """
         logger.info('Job {0} terminating all currently running tasks'.format(self.name))
@@ -463,14 +446,12 @@ class Job(DAG):
             if task.started_at and not task.completed_at:
                 task.terminate()
 
-
     def kill_all(self):
         """ Kill all currently running jobs. """
         logger.info('Job {0} killing all currently running tasks'.format(self.name))
         for task in self.tasks.itervalues():
             if task.started_at and not task.completed_at:
                 task.kill()
-
 
     def edit(self, **kwargs):
         """ Change this Job's name.
@@ -494,7 +475,6 @@ class Job(DAG):
 
         self.parent.commit(cascade=True)
 
-
     def update_job_notes(self, notes):
         logger.debug('Job {0} updating notes'.format(self.name))
         if not self.state.allow_edit_job:
@@ -504,6 +484,14 @@ class Job(DAG):
 
         self.parent.commit(cascade=True)
 
+    def edit_job_recipient(self, recipient):
+        logger.debug('Job {0} updating recipients'.format(self.name))
+        if not self.state.allow_edit_job:
+            raise DagobahError('job cannot be edited in its current state')
+
+        setattr(self, 'recipient', recipient)
+
+        self.parent.commit(cascade=True)
 
     def edit_task(self, task_name, **kwargs):
         """ Change the name of a Task owned by this Job.
@@ -546,7 +534,6 @@ class Job(DAG):
 
         self.parent.commit(cascade=True)
 
-
     def _complete_task(self, task_name, **kwargs):
         """ Marks this task as completed. Kwargs are stored in the run log. """
 
@@ -578,14 +565,12 @@ class Job(DAG):
 
         self._on_completion()
 
-
     def _put_task_in_run_log(self, task_name):
         """ Initializes the run log task entry for this task. """
         logger.debug('Job {0} initializing run log entry for task {1}'.format(self.name, task_name))
         data = {'start_time': datetime.utcnow(),
                 'command': self.tasks[task_name].command}
         self.run_log['tasks'][task_name] = data
-
 
     def _is_complete(self):
         """ Returns Boolean of whether the Job has completed. """
@@ -630,7 +615,6 @@ class Job(DAG):
 
         self.destroy_snapshot()
 
-
     def _start_if_ready(self, task_name):
         """ Start this task if all its dependencies finished successfully. """
         logger.debug('Job {0} running _start_if_ready for task {1}'.format(self.name, task_name))
@@ -643,7 +627,6 @@ class Job(DAG):
         self._put_task_in_run_log(task_name)
         task.start()
 
-
     def _set_status(self, status):
         """ Enforces enum-like behavior on the status field. """
         try:
@@ -651,12 +634,10 @@ class Job(DAG):
         except:
             raise DagobahError('could not set status %s' % status)
 
-
     def _commit_run_log(self):
         """" Commit the current run log to the backend. """
         logger.debug('Committing run log for job {0}'.format(self.name))
         self.backend.commit_log(self.run_log)
-
 
     def _serialize(self, include_run_logs=False, strict_json=False):
         """ Serialize a representation of this Job to a Python dict object. """
@@ -684,6 +665,7 @@ class Job(DAG):
                   'status': self.state.status,
                   'cron_schedule': self.cron_schedule,
                   'next_run': self.next_run,
+                  'recipient': self.recipient,
                   'notes': self.notes}
 
         if strict_json:
@@ -765,7 +747,6 @@ class Task(object):
         self.hard_timeout = timeout
         self.parent_job.commit()
 
-
     def set_hostname(self, hostname):
         logger.debug('Task {0} setting hostname'.format(self.name))
         self.hostname = hostname
@@ -805,7 +786,8 @@ class Task(object):
                                             shell=True,
                                             env=os.environ.copy(),
                                             stdout=self.stdout_file,
-                                            stderr=self.stderr_file)
+                                            stderr=self.stderr_file,
+                                            executable="/bin/bash")
 
         self.started_at = datetime.utcnow()
         self._start_check_timer()
@@ -865,8 +847,8 @@ class Task(object):
 
         self._task_complete(success=True if return_code == 0 else False,
                             return_code=return_code,
-                            stdout=self.stdout,
-                            stderr=self.stderr,
+                            stdout=self.stdout.decode('utf-8'),
+                            stderr=self.stderr.decode('utf-8'),
                             start_time=self.started_at,
                             complete_time=datetime.utcnow())
 
@@ -922,7 +904,6 @@ class Task(object):
         self.terminate_sent = True
         self.process.terminate()
 
-
     def kill(self):
         """ Send SIGKILL to the task's process. """
         logger.info('Sending SIGKILL to task {0}'.format(self.name))
@@ -934,7 +915,6 @@ class Task(object):
             raise DagobahError('task does not have a running process')
         self.kill_sent = True
         self.process.kill()
-
 
     def head(self, stream='stdout', num_lines=10):
         """ Head a specified stream (stdout or stderr) by num_lines. """
@@ -949,7 +929,6 @@ class Task(object):
         else:
             return self._head_temp_file(target, num_lines)
 
-
     def tail(self, stream='stdout', num_lines=10):
         """ Tail a specified stream (stdout or stderr) by num_lines. """
         target = self._map_string_to_file(stream)
@@ -963,27 +942,24 @@ class Task(object):
         else:
             return self._tail_temp_file(target, num_lines)
 
-
     def get_stdout(self):
         """ Returns the entire stdout output of this process. """
         return self._read_temp_file(self.stdout_file)
-
 
     def get_stderr(self):
         """ Returns the entire stderr output of this process. """
         return self._read_temp_file(self.stderr_file)
 
-
     def _timeout_check(self):
         logger.debug('Running timeout check for task {0}'.format(self.name))
         if (self.soft_timeout != 0 and
-            (datetime.utcnow() - self.started_at).seconds >= self.soft_timeout
-                and not self.terminate_sent):
+                    (datetime.utcnow() - self.started_at).seconds >= self.soft_timeout
+            and not self.terminate_sent):
             self.terminate()
 
         if (self.hard_timeout != 0 and
-            (datetime.utcnow() - self.started_at).seconds >= self.hard_timeout
-                and not self.kill_sent):
+                    (datetime.utcnow() - self.started_at).seconds >= self.hard_timeout
+            and not self.kill_sent):
             self.kill()
 
     def get_run_log_history(self):
@@ -994,12 +970,10 @@ class Task(object):
         return self.backend.get_run_log(self.parent_job.job_id, self.name,
                                         log_id)
 
-
     def _map_string_to_file(self, stream):
         if stream not in ['stdout', 'stderr']:
             raise DagobahError('stream must be stdout or stderr')
         return self.stdout_file if stream == 'stdout' else self.stderr_file
-
 
     def _start_check_timer(self):
         """ Periodically checks to see if the task has completed. """
@@ -1009,23 +983,19 @@ class Task(object):
         self.timer.daemon = True
         self.timer.start()
 
-
     def _read_temp_file(self, temp_file):
         """ Reads a temporary file for Popen stdout and stderr. """
         temp_file.seek(0)
         result = temp_file.read()
         return result
 
-
     def _head_string(self, in_str, num_lines):
         """ Returns a list of the first num_lines lines from a string. """
         return in_str.split('\n')[:num_lines]
 
-
     def _tail_string(self, in_str, num_lines):
         """ Returns a list of the last num_lines lines from a string. """
-        return in_str.split('\n')[-1 * num_lines :]
-
+        return in_str.split('\n')[-1 * num_lines:]
 
     def _head_temp_file(self, temp_file, num_lines):
         """ Returns a list of the first num_lines lines from a temp file. """
@@ -1039,7 +1009,6 @@ class Task(object):
             if curr_line >= num_lines:
                 break
         return result
-
 
     def _tail_temp_file(self, temp_file, num_lines, seek_offset=10000):
         """ Returns a list of the last num_lines lines from a temp file.
@@ -1067,7 +1036,6 @@ class Task(object):
                 result.pop(0)
         return result
 
-
     def _task_complete(self, **kwargs):
         """ Performs cleanup tasks and notifies Job that the Task finished. """
         logger.debug('Running _task_complete for task {0}'.format(self.name))
@@ -1075,7 +1043,6 @@ class Task(object):
             self.completed_at = datetime.utcnow()
             self.successful = kwargs.get('success', None)
             self.parent_job._complete_task(self.name, **kwargs)
-
 
     def _serialize(self, include_run_logs=False, strict_json=False):
         """ Serialize a representation of this Task to a Python dict. """

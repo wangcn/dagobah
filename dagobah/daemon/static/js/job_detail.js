@@ -477,7 +477,7 @@ function updateJobNextRun() {
     if (job.next_run === null) {
         $('#next-run').val('Not scheduled');
     } else {
-        $('#next-run').val(moment.utc(job.next_run).local().format('LLL'));
+        $('#next-run').val(moment.utc(job.next_run).local().format('YYYY-MM-DD HH:mm, a'));
     }
 }
 
@@ -506,6 +506,36 @@ function updateNotes(newNotes) {
         },
         error: function() {
             showAlert('notes-alert', 'error', 'There was an error updating notes.');
+        },
+        async: true
+    });
+}
+
+$('#save-recipient').click(function() {
+    var recipient = $('#job-recipient').val();
+    updateRecipient(recipient);
+});
+
+function updateRecipient(recipient) {
+    if (!job.loaded) {
+        return;
+    }
+
+    data = {
+        job_name: job.name,
+        recipient: recipient
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: $SCRIPT_ROOT + '/api/edit_job_recipient',
+        data: data,
+        dataType: 'json',
+        success: function() {
+            showAlert('recipient-alert', 'success', 'recipient updated.');
+        },
+        error: function() {
+            showAlert('recipient-alert', 'error', 'There was an error updating recipient.');
         },
         async: true
     });

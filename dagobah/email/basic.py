@@ -8,10 +8,12 @@ import premailer
 
 from .common import EmailTemplate
 
+
 class BasicEmail(EmailTemplate):
 
     def send_job_completed(self, data):
-
+        if 'recipient' in data and data['recipient']:
+            self.recipients = data['recipient'].split(';')
         self._format_job_dict(data)
         for task in data.get('tasks', []):
             self._format_task_dict(task)
@@ -74,3 +76,9 @@ class BasicEmail(EmailTemplate):
         if (not in_date) or (not isinstance(in_date, datetime)):
             return in_date
         return in_date.strftime('%Y-%m-%d %H:%M:%S UTC')
+
+    def _get_recipient(self, job_id):
+        from ..daemon.daemon import app
+        backend = app.config['dagobah'].backend
+        result = backend.get_recipient_list(job_id)
+        return result

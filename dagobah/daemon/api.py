@@ -386,6 +386,7 @@ def edit_job_recipient():
         abort(400)
 
     import pprint
+
     pprint.pprint(args)
     job = dagobah.get_job(args['job_name'])
     job.edit_job_recipient(args['recipient'])
@@ -465,6 +466,26 @@ def set_hard_timeout():
     task.set_hard_timeout(args['hard_timeout'])
 
 
+@app.route('/api/export_all_jobs', methods=['GET'])
+@login_required
+def export_all_jobs():
+    jobs = dagobah.get_all_jobs()
+    if not jobs:
+        abort(400)
+    job_list = []
+    for job in jobs:
+        job_list.append(job._serialize(strict_json=True))
+
+    to_send = StringIO.StringIO()
+    to_send.write(json.dumps(job_list))
+    to_send.write('\n')
+    to_send.seek(0)
+
+    return send_file(to_send,
+                     attachment_filename='%s.json' % 'wifi_cron',
+                     as_attachment=True)
+
+
 @app.route('/api/export_job', methods=['GET'])
 @login_required
 def export_job():
@@ -485,6 +506,13 @@ def export_job():
                      attachment_filename='%s.json' % job.name,
                      as_attachment=True)
 
+@app.route('/api/import_all_jobs', methods=['POST'])
+@login_required
+@api_call
+def import_all_jobs():
+    file = request.files['file']
+    if (file and allowed_file(file.filename, ['json'])):
+        dagobah.add_all_jobs_from_json(file.read(), destructive=True)
 
 @app.route('/api/import_job', methods=['POST'])
 @login_required

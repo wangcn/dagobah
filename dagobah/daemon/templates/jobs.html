@@ -39,8 +39,7 @@
 
   <script id="edit-job-name-template" type="text/x-handlebars-template">
     <td>
-      <input type='text' class='submit-on-enter' data-original-name='{{ jobName }}'
-             value='{{ jobName }}'></input>
+      <input type='text' class='submit-on-enter' data-original-name='{{ jobName }}' value='{{ jobName }}' />
       <button class='btn btn-success save-job-name'>Save</button>
     </td>
   </script>
@@ -56,6 +55,10 @@
   <div id='table-alert' class='alert hidden'>
   </div>
 
+  <button id="export_all_jobs" class='btn btn-info job-export'
+          onclick="window.location.href = '{{ allExportURL }}';">
+    Export All Jobs
+  </button>
   <table class='table table-striped'>
     <thead>
       <th>Name</th>
@@ -86,7 +89,6 @@
 
   <div class='row'>
     <div class='span12'>
-
       <h4 class='inline control-label'>Import Job from JSON</h4>
       <form id='job-importer' class='form form-inline'
             enctype='multipart/form-data'
@@ -96,7 +98,6 @@
         <button id='import-job' type='submit'
                 class='btn btn-success' onsubmit='return false;'>Import Job</button>
       </form>
-
     </div>
   </div>
 

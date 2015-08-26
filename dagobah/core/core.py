@@ -87,6 +87,14 @@ class Dagobah(object):
 
         self.commit(cascade=True)
 
+    def add_all_jobs_from_json(self, all_jobs_json, destructive=False):
+        all_jobs_content = json.loads(all_jobs_json)
+        if type(all_jobs_content) != type([]):
+            raise DagobahError('error job backup file')
+        for job in all_jobs_content:
+            self.add_job_from_json(json.dumps(job), destructive)
+
+
     def add_job_from_json(self, job_json, destructive=False):
         """ Construct a new Job from an imported JSON spec. """
         logger.debug('Importing job from JSON document: {0}'.format(job_json))
@@ -209,6 +217,10 @@ class Dagobah(object):
                 return job
         logger.warn('Tried to find job with name {0}, but job not found'.format(job_name))
         return None
+
+    def get_all_jobs(self):
+        """Returns all jobs"""
+        return self.jobs
 
     def delete_job(self, job_name):
         """ Delete a job by name, or error out if no such job exists. """

@@ -4,7 +4,7 @@ from flask import render_template, redirect, url_for, abort
 from flask_login import login_required
 
 from .daemon import app
-from .api import get_jobs, import_job
+from .api import get_jobs, import_all_jobs
 
 dagobah = app.config['dagobah']
 
@@ -19,13 +19,13 @@ def index_route():
 def jobs():
     """ Show information on all known Jobs. """
     return render_template('jobs.html',
-                           jobs=get_jobs())
+                           jobs=get_jobs(), allExportURL='/api/export_all_jobs')
 
 @app.route('/jobs/import', methods=['POST'])
 @login_required
 def jobs_import_view():
     """ Import a Job and redirect to the Jobs page. """
-    import_job()
+    import_all_jobs()
     return redirect(url_for('jobs'))
 
 @app.route('/job/<job_id>', methods=['GET'])
